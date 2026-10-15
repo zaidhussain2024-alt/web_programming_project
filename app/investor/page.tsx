@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { SECTORS, STAGES, LOCATIONS, type StartupResult } from "@/lib/mock-data"
+import { StartupDetailSheet } from "@/components/startup-detail-sheet"
 import {
   ArrowDownUp,
   Brain,
@@ -107,6 +108,13 @@ export default function InvestorDashboard() {
   const [locationFilter, setLocationFilter] = useState<string>("all")
   const [sortBy, setSortBy] = useState<SortKey>("matchScore")
   const [page, setPage] = useState(1)
+  const [selectedStartup, setSelectedStartup] = useState<StartupResult | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+
+  const handleCardClick = (startup: StartupResult) => {
+    setSelectedStartup(startup)
+    setSheetOpen(true)
+  }
 
   const params = new URLSearchParams({
     sector: sectorFilter,
@@ -173,7 +181,15 @@ export default function InvestorDashboard() {
         {aiRecommended.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {aiRecommended.map((startup) => (
-              <StartupCard key={startup.id} startup={startup} />
+              <button
+                key={startup.id}
+                type="button"
+                onClick={() => handleCardClick(startup)}
+                className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                aria-label={`View details for ${startup.name}`}
+              >
+                <StartupCard startup={startup} />
+              </button>
             ))}
           </div>
         ) : (
@@ -299,7 +315,15 @@ export default function InvestorDashboard() {
       ) : startups.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {startups.map((startup) => (
-            <StartupCard key={startup.id} startup={startup} />
+            <button
+              key={startup.id}
+              type="button"
+              onClick={() => handleCardClick(startup)}
+              className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+              aria-label={`View details for ${startup.name}`}
+            >
+              <StartupCard startup={startup} />
+            </button>
           ))}
         </div>
       ) : (
@@ -344,6 +368,13 @@ export default function InvestorDashboard() {
           </Button>
         </div>
       )}
+
+      {/* Startup detail sheet — driven by selectedStartup state */}
+      <StartupDetailSheet
+        startup={selectedStartup}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+      />
     </div>
   )
 }
