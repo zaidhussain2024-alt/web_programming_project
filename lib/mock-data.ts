@@ -145,6 +145,101 @@ function formatCurrency(n: number): string {
   return `$${n}`
 }
 
+// Sector-specific name components for deterministic, realistic fictional names
+const SECTOR_NAME_POOLS: Record<string, { prefixes: string[]; suffixes: string[] }> = {
+  AI: {
+    prefixes: [
+      "Velox", "Nexora", "Cogni", "Neural", "Synthetix", "Deep", "Cortex", "Agentic", "Tensor", "Vector",
+      "Lumina", "Omni", "Synapse", "Hyper", "Apex", "Algor", "Prism", "Aether", "Quantum", "Intelli",
+      "Spectra", "Chronos", "Meta", "Zenith", "Bionic",
+    ],
+    suffixes: [
+      " AI", " Labs", " Intelligence", " Mind", " Systems", " Cognition", " Flow", " Vision", " Core", " Robotics",
+      " Analytics", " Matrix", " Foundry", " Engine", " Dynamics", " Compute", " Nexus", " Works", " Insight", " Signal",
+      "Wave", "Fleet", "Scale", "Stack", "Sync",
+    ],
+  },
+  FinTech: {
+    prefixes: [
+      "Trust", "Fin", "Moneta", "Fiscal", "Equi", "Prime", "Stash", "Asset", "Yield", "Kite",
+      "Apex", "Velo", "Banc", "Sterling", "Pave", "Stride", "Pocket", "Clear", "Anchor", "Cent",
+      "Tariff", "Bond", "Port", "NovaPay", "Credo",
+    ],
+    suffixes: [
+      "Ledger", "Bridge", "Vault", "Cash", "Capital", "Credit", "Coin", "Trade", "Wallet", "Finance",
+      "Mint", "Wire", "Wealth", "Exchange", "Vest", "Bank", "Link", "Scale", "Path", "Pass",
+      "Holdings", "Lend", "Reserve", "Settlement", "Stack",
+    ],
+  },
+  Healthcare: {
+    prefixes: [
+      "Nexora", "Medi", "Bio", "Vital", "Thera", "Gene", "Pharma", "Clinic", "Nano", "Cell",
+      "Lifeline", "Sana", "Synapse", "Cardio", "Neuro", "Vigor", "Alivio", "Integra", "Helix", "Regen",
+      "Derma", "Ortho", "Onco", "Salus", "Holos",
+    ],
+    suffixes: [
+      " Health", " Care", "Nova", " Diagnostics", " Therapeutics", " Genetics", "Life", "Pulse", " Vitals", " Solutions",
+      " Labs", " Science", "Heal", " Works", " Medical", "Cure", "Plus", "Direct", "Guard", "Hub",
+      "Connect", "Path", "Tech", " Systems", "Sphere",
+    ],
+  },
+  Cybersecurity: {
+    prefixes: [
+      "Cipher", "Iron", "Shadow", "Bastion", "Aegis", "Vigil", "Perimeter", "Firewall", "Safe", "Apex",
+      "Stealth", "Ward", "Crypt", "Titan", "Sentry", "Bunker", "Dark", "Zero", "Onyx", "Defend",
+      "Krypton", "Armor", "Phalanx", "TrueSec", "Fortress",
+    ],
+    suffixes: [
+      "Shield", "Guard", "Defense", "Security", "Lock", "Wall", "Fort", "Watch", "Trace", "Net",
+      "Block", "Protect", "Core", "Audit", "Force", "Patrol", "Zone", "Ops", "Layer", "Point",
+      "Mesh", "Vault", "Gate", "Haven", "Sentinel",
+    ],
+  },
+  EdTech: {
+    prefixes: [
+      "Learn", "Edu", "Skill", "Tutor", "Class", "Academia", "Mentor", "Scholar", "Study", "Mind",
+      "Cogni", "Smart", "Bright", "Wisdom", "Talent", "Campus", "Course", "Prep", "Mastery", "Adept",
+      "Primer", "Omni", "Lumina", "Spark", "Summit",
+    ],
+    suffixes: [
+      "Hub", "Lab", "Space", "Works", "Academy", "Quest", "Path", "Craft", "Bridge", "Wave",
+      "Sphere", "Grow", "Verse", "Guide", "Zone", "Forge", "Track", "Base", "Nest", "Point",
+      "Flow", "Fleet", "Launch", "Desk", "Hive",
+    ],
+  },
+  "E-commerce": {
+    prefixes: [
+      "Cart", "Shop", "Market", "Commerce", "Drop", "Retail", "Ship", "Store", "Vend", "Merch",
+      "Trade", "Buy", "Deal", "Bazaar", "Pack", "Parcel", "Shelf", "Order", "Swift", "Vibe",
+      "Kiosk", "Depot", "Plaza", "Outlet", "Crate",
+    ],
+    suffixes: [
+      "Fleet", "Direct", "Express", "Flow", "Mart", "Box", "Spot", "Lane", "Portal", "Supply",
+      "Nest", "Way", "Link", "Bay", "Hive", "Port", "Pass", "Scale", "Stack", "Grid",
+      "Wave", "Base", "Track", "Line", "Hub",
+    ],
+  },
+}
+
+function getDeterministicStartupName(
+  sector: string,
+  sectorIndex: number,
+  usedNames: Set<string>
+): string {
+  const pool = SECTOR_NAME_POOLS[sector] || SECTOR_NAME_POOLS["AI"]
+  let k = sectorIndex
+  while (true) {
+    const prefix = pool.prefixes[k % pool.prefixes.length]
+    const suffix = pool.suffixes[Math.floor(k / pool.prefixes.length) % pool.suffixes.length]
+    const name = suffix.startsWith(" ") ? `${prefix}${suffix}` : `${prefix}${suffix}`
+    if (!usedNames.has(name)) {
+      usedNames.add(name)
+      return name
+    }
+    k++
+  }
+}
+
 // Generate the full 1500-startup dataset (deterministic via seed)
 let _cachedDataset: Startup[] | null = null
 
@@ -153,6 +248,15 @@ export function generateDataset(count = 1500): Startup[] {
 
   const rng = createRng(42)
   const data: Startup[] = []
+  const usedNames = new Set<string>()
+  const sectorCounts: Record<string, number> = {
+    AI: 0,
+    FinTech: 0,
+    Healthcare: 0,
+    EdTech: 0,
+    "E-commerce": 0,
+    Cybersecurity: 0,
+  }
 
   for (let i = 1; i <= count; i++) {
     const startupId = generateStartupId(i)
@@ -180,13 +284,20 @@ export function generateDataset(count = 1500): Startup[] {
 
     const daysAgo = rng.int(365, 730)
     const createdAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
+    const sector = rng.choice(SECTORS)
+    const businessModel = rng.choice(BUSINESS_MODELS)
+    const location = rng.choice(LOCATIONS)
+
+    const sectorIdx = sectorCounts[sector] ?? 0
+    sectorCounts[sector] = sectorIdx + 1
+    const name = getDeterministicStartupName(sector, sectorIdx, usedNames)
 
     data.push({
       id: startupId,
-      name: `Startup_${startupId}`,
-      sector: rng.choice(SECTORS),
+      name,
+      sector,
       stage,
-      business_model: rng.choice(BUSINESS_MODELS),
+      business_model: businessModel,
       funding_needed: fundingNeeded,
       funding_raised: fundingRaised,
       valuation,
@@ -197,7 +308,7 @@ export function generateDataset(count = 1500): Startup[] {
       runway_months: runwayMonths,
       user_count: userCount,
       traction_score: tractionScore,
-      location: rng.choice(LOCATIONS),
+      location,
       created_at: createdAt.toISOString().replace("T", " ").slice(0, 19),
     })
   }

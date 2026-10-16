@@ -15,6 +15,7 @@ import {
   type PredictionResult,
   type InvestorMatch,
 } from "@/lib/mock-data"
+import { InvestorDetailSheet } from "@/components/investor-detail-sheet"
 import {
   ArrowUpRight,
   Brain,
@@ -69,7 +70,7 @@ function GrowthMeter({ score, label }: { score: number; label: "High" | "Low" })
 
 function InvestorCard({ investor }: { investor: InvestorMatch }) {
   return (
-    <Card className="group border-border bg-card transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+    <Card className="group cursor-pointer border-border bg-card transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
       <CardContent className="p-5">
         <div className="flex items-start gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 font-serif text-sm font-bold text-primary">
@@ -115,6 +116,13 @@ export default function StartupDashboard() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<PredictionResult | null>(null)
   const [investors, setInvestors] = useState<InvestorMatch[]>([])
+  const [selectedInvestor, setSelectedInvestor] = useState<InvestorMatch | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  const handleInvestorClick = (investor: InvestorMatch) => {
+    setSelectedInvestor(investor)
+    setDrawerOpen(true)
+  }
 
   const handlePredict = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -311,7 +319,15 @@ export default function StartupDashboard() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 {investors.map((investor) => (
-                  <InvestorCard key={investor.id} investor={investor} />
+                  <button
+                    key={investor.id}
+                    type="button"
+                    onClick={() => handleInvestorClick(investor)}
+                    className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                    aria-label={`View details for ${investor.name}`}
+                  >
+                    <InvestorCard investor={investor} />
+                  </button>
                 ))}
               </div>
             </div>
@@ -333,6 +349,13 @@ export default function StartupDashboard() {
           )}
         </div>
       </div>
+
+      {/* Investor detail sheet — driven by selectedInvestor state */}
+      <InvestorDetailSheet
+        investor={selectedInvestor}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+      />
     </div>
   )
 }
